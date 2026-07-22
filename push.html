@@ -79,11 +79,51 @@
     #token-status.is-token {
       color: var(--text);
     }
+
+    #push-toast {
+      display: none;
+      margin: 0 0 0.75rem;
+      padding: 1rem 1.1rem;
+      border-radius: 0.5rem;
+      border-left: 4px solid var(--accent);
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      animation: toast-in 0.25s ease-out;
+    }
+
+    #push-toast.is-visible {
+      display: block;
+    }
+
+    #push-toast strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      font-size: 1rem;
+    }
+
+    #push-toast span {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.4;
+    }
+
+    @keyframes toast-in {
+      from {
+        opacity: 0;
+        transform: translateY(-0.4rem);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
   </style>
 </head>
 
 <body>
   <main>
+    <div id="push-toast" role="status" aria-live="polite"></div>
     <button type="button" id="get-token-btn">Get push token</button>
     <pre id="token-status" aria-live="polite">Click the button to request permission and fetch your FCM token.</pre>
   </main>
@@ -123,7 +163,37 @@
     const app = initializeApp(firebaseConfig);
     const button = document.getElementById("get-token-btn");
     const statusEl = document.getElementById("token-status");
+    const toastEl = document.getElementById("push-toast");
     const logLines = [];
+    let toastTimer = null;
+
+    function showPushOnPage({ title, body }) {
+      toastEl.innerHTML = `<strong>${escapeHtml(title || "New message")}</strong><span>${escapeHtml(body || "")}</span>`;
+      toastEl.classList.add("is-visible");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toastEl.classList.remove("is-visible");
+      }, 12000);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    // Foreground: SW posts here when a push arrives while this tab is open.
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        if (event.data?.type !== "FCM_PUSH") {
+          return;
+        }
+        console.log("Push received in page:", event.data);
+        showPushOnPage(event.data);
+      });
+    }
 
     function setStatus(message, kind = "info") {
       statusEl.textContent = message;
@@ -354,6 +424,10 @@
           const messaging = getMessaging(app);
           onMessage(messaging, (payload) => {
             console.log("Foreground FCM message:", payload);
+            showPushOnPage({
+              title: payload.notification?.title || payload.data?.title,
+              body: payload.notification?.body || payload.data?.body,
+            });
           });
           sdkToken = await withTimeout(
             getToken(messaging, {
