@@ -157,6 +157,12 @@
       return Uint8Array.from(raw, (c) => c.charCodeAt(0));
     }
 
+    function arrayToBase64Url(arrayBuffer) {
+      const bytes = new Uint8Array(arrayBuffer);
+      const base64 = btoa(String.fromCharCode(...bytes));
+      return base64.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+    }
+
     async function waitForActivated(registration) {
       const worker =
         registration.installing || registration.waiting || registration.active;
@@ -297,27 +303,73 @@
         );
         log("4c", `OK authToken length=${installAuth.length}`);
 
-        log("5", "Calling FCM getToken…");
-        const messaging = getMessaging(app);
-        onMessage(messaging, (payload) => {
-          console.log("Foreground FCM message:", payload);
-        });
+        // Bypass SDK getToken first: proves FCM registrations API works and
+        // avoids IndexedDB deadlock with a messaging-enabled service worker.
+        log("5a", "Calling FCM registrations API directly…");
+        const authKey = pushSubscription.getKey("auth");
+        const p256dhKey = pushSubscription.getKey("p256dh");
+        if (!authKey || !p256dhKey) {
+          throw new Error("Push subscription is missing auth/p256dh keys.");
+        }
 
-        const token = await withTimeout(
-          getToken(messaging, {
-            vapidKey,
-            serviceWorkerRegistration,
-          }),
-          20000,
-          "getToken timed out after Installations succeeded — FCM registrations API or local token DB issue"
+        const fcmResponse = await probeUrl(
+          "5a",
+          `https://fcmregistrations.googleapis.com/v1/projects/${firebaseConfig.projectId}/registrations`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+              "x-goog-api-key": firebaseConfig.apiKey,
+              "x-goog-firebase-installations-auth": `FIS ${installAuth}`,
+            },
+            body: JSON.stringify({
+              web: {
+                origin: new URL(serviceWorkerRegistration.scope).host,
+                endpoint: pushSubscription.endpoint,
+                auth: arrayToBase64Url(authKey),
+                p256dh: arrayToBase64Url(p256dhKey),
+                applicationPubKey: vapidKey,
+              },
+            }),
+          }
         );
 
-        if (!token) {
-          throw new Error("getToken returned empty.");
+        const fcmJson = await fcmResponse.json();
+        if (!fcmResponse.ok) {
+          throw new Error(
+            `FCM registrations failed: ${fcmJson?.error?.message || fcmResponse.status}`
+          );
+        }
+        if (!fcmJson.token) {
+          throw new Error(
+            `FCM registrations returned no token: ${JSON.stringify(fcmJson)}`
+          );
+        }
+        log("5a", `OK token from direct FCM API (${fcmJson.token.length} chars)`);
+
+        log("5b", "Also trying SDK getToken (may still use IndexedDB)…");
+        let sdkToken = null;
+        try {
+          const messaging = getMessaging(app);
+          onMessage(messaging, (payload) => {
+            console.log("Foreground FCM message:", payload);
+          });
+          sdkToken = await withTimeout(
+            getToken(messaging, {
+              vapidKey,
+              serviceWorkerRegistration,
+            }),
+            10000,
+            "SDK getToken timed out (IndexedDB likely still blocked)"
+          );
+          log("5b", sdkToken ? `OK sdk token length=${sdkToken.length}` : "empty");
+        } catch (sdkError) {
+          log("5b", `skipped — ${sdkError.message}`);
         }
 
         logLines.length = 0;
-        setStatus(token, "token");
+        setStatus(sdkToken || fcmJson.token, "token");
       } catch (error) {
         console.error(error);
         log("ERROR", error?.message || String(error));
