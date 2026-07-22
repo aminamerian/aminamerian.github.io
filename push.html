@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FCM Push Token</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --text: #e7ecf3;
+      --muted: #8b9bb4;
+      --accent: #3d8bfd;
+      --error: #f07178;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background:
+        radial-gradient(ellipse at top, #1e3a5f 0%, transparent 55%),
+        var(--bg);
+      color: var(--text);
+      padding: 1.5rem;
+    }
+
+    main {
+      width: min(40rem, 100%);
+    }
+
+    button {
+      display: block;
+      width: 100%;
+      padding: 0.85rem 1.25rem;
+      border: 0;
+      border-radius: 0.5rem;
+      background: var(--accent);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button:hover {
+      filter: brightness(1.08);
+    }
+
+    button:disabled {
+      opacity: 0.65;
+      cursor: wait;
+    }
+
+    #token-status {
+      margin: 0.75rem 0 0;
+      padding: 1rem;
+      min-height: 4.5rem;
+      border-radius: 0.5rem;
+      background: var(--surface);
+      color: var(--muted);
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+      font-size: 0.85rem;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    #token-status.is-error {
+      color: var(--error);
+    }
+
+    #token-status.is-token {
+      color: var(--text);
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <button type="button" id="get-token-btn">Get push token</button>
+    <pre id="token-status" aria-live="polite">Click the button to request permission and fetch your FCM token.</pre>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
+    import {
+      getMessaging,
+      getToken,
+      isSupported,
+      onMessage,
+    } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-messaging.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBjp1wh93oOaI44iDcZMSivjzSVEjHI_eM",
+      authDomain: "personal-website-8c1d9.firebaseapp.com",
+      projectId: "personal-website-8c1d9",
+      storageBucket: "personal-website-8c1d9.firebasestorage.app",
+      messagingSenderId: "638275138476",
+      appId: "1:638275138476:web:e2bf4ae4bfa404e00e8009",
+      measurementId: "G-DK0C5G97RJ",
+    };
+
+    // Web Push certificate public key from Firebase Console →
+    // Project settings → Cloud Messaging → Web Push certificates
+    const vapidKey = "BGunPWXUtJffDFh2Hoz-meplQ0aqvECCjEx2sbsMf7eyGm_SKx1g48n-6wNWtROFyqV4tGLGzAchhgZaalyGZJY";
+
+    const app = initializeApp(firebaseConfig);
+    const button = document.getElementById("get-token-btn");
+    const statusEl = document.getElementById("token-status");
+
+    function setStatus(message, kind = "info") {
+      statusEl.textContent = message;
+      statusEl.classList.toggle("is-error", kind === "error");
+      statusEl.classList.toggle("is-token", kind === "token");
+    }
+
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      setStatus("Requesting notification permission…");
+
+      try {
+        if (!(await isSupported())) {
+          throw new Error(
+            "This browser does not support Firebase Cloud Messaging."
+          );
+        }
+
+        if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+          throw new Error(
+            "Notifications or service workers are not available in this browser."
+          );
+        }
+
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          throw new Error(
+            "Notification permission was denied. Allow notifications for this site and try again."
+          );
+        }
+
+        setStatus("Registering service worker…");
+        const serviceWorkerRegistration = await navigator.serviceWorker.register(
+          "/firebase-messaging-sw.js"
+        );
+        await navigator.serviceWorker.ready;
+
+        const messaging = getMessaging(app);
+
+        onMessage(messaging, (payload) => {
+          console.log("Foreground FCM message:", payload);
+        });
+
+        setStatus("Fetching FCM token…");
+        const token = await getToken(messaging, {
+          vapidKey,
+          serviceWorkerRegistration,
+        });
+
+        if (!token) {
+          throw new Error(
+            "No registration token available. Check that the VAPID key is set and Cloud Messaging is enabled."
+          );
+        }
+
+        setStatus(token, "token");
+      } catch (error) {
+        console.error(error);
+        setStatus(error?.message || String(error), "error");
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+
+</html>
