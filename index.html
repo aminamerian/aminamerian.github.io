@@ -161,6 +161,18 @@
          }
       })();
    </script>
+   <script>
+      (function () {
+         if (!('serviceWorker' in navigator)) {
+            return;
+         }
+         navigator.serviceWorker
+            .register('/firebase-messaging-sw.js')
+            .catch(function (error) {
+               console.error('FCM service worker registration failed:', error);
+            });
+      })();
+   </script>
 </body>
 
 </html>

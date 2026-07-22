@@ -145,10 +145,13 @@
           );
         }
 
-        setStatus("Registering service worker…");
-        const serviceWorkerRegistration = await navigator.serviceWorker.register(
-          "/firebase-messaging-sw.js"
-        );
+        const serviceWorkerRegistration =
+          await navigator.serviceWorker.getRegistration("/");
+        if (!serviceWorkerRegistration) {
+          throw new Error(
+            "Service worker is not registered yet. Open the home page first, then try again."
+          );
+        }
         await navigator.serviceWorker.ready;
 
         const messaging = getMessaging(app);
