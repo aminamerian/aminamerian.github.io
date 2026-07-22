@@ -96,6 +96,11 @@
       isSupported,
       onMessage,
     } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-messaging.js";
+    import {
+      getInstallations,
+      getId,
+      getToken as getInstallationAuthToken,
+    } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-installations.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBjp1wh93oOaI44iDcZMSivjzSVEjHI_eM",
@@ -118,11 +123,19 @@
     const app = initializeApp(firebaseConfig);
     const button = document.getElementById("get-token-btn");
     const statusEl = document.getElementById("token-status");
+    const logLines = [];
 
     function setStatus(message, kind = "info") {
       statusEl.textContent = message;
       statusEl.classList.toggle("is-error", kind === "error");
       statusEl.classList.toggle("is-token", kind === "token");
+    }
+
+    function log(step, detail) {
+      const line = `[${step}] ${detail}`;
+      logLines.push(line);
+      console.log(line);
+      setStatus(logLines.join("\n"));
     }
 
     function withTimeout(promise, ms, message) {
@@ -172,10 +185,6 @@
       return registration;
     }
 
-    /**
-     * Clear stale registrations (e.g. old scope "/") then register with
-     * Firebase's default messaging scope.
-     */
     async function registerMessagingServiceWorker() {
       const existing = await navigator.serviceWorker.getRegistrations();
       await Promise.all(existing.map((reg) => reg.unregister()));
@@ -187,45 +196,57 @@
       return waitForActivated(registration);
     }
 
+    async function probeUrl(label, url, init) {
+      const started = performance.now();
+      try {
+        const response = await withTimeout(
+          fetch(url, init),
+          10000,
+          `${label}: fetch timed out after 10s`
+        );
+        const ms = Math.round(performance.now() - started);
+        log(label, `HTTP ${response.status} in ${ms}ms`);
+        return response;
+      } catch (error) {
+        const ms = Math.round(performance.now() - started);
+        log(label, `FAILED in ${ms}ms — ${error.message}`);
+        throw error;
+      }
+    }
+
     button.addEventListener("click", async () => {
       button.disabled = true;
-      setStatus("Requesting notification permission…");
+      logLines.length = 0;
 
       try {
+        log("0", "Checking browser support…");
         if (!(await isSupported())) {
-          throw new Error(
-            "This browser does not support Firebase Cloud Messaging."
-          );
+          throw new Error("Firebase Cloud Messaging is not supported here.");
         }
-
         if (!("Notification" in window) || !("serviceWorker" in navigator)) {
-          throw new Error(
-            "Notifications or service workers are not available in this browser."
-          );
+          throw new Error("Notifications/service workers unavailable.");
         }
+        log("0", "OK");
 
+        log("1", "Requesting notification permission…");
         const permission = await Notification.requestPermission();
+        log("1", `permission=${permission}`);
         if (permission !== "granted") {
-          throw new Error(
-            "Notification permission was denied. Allow notifications for this site and try again."
-          );
+          throw new Error("Notification permission was denied.");
         }
 
-        setStatus("Registering messaging service worker…");
+        log("2", "Registering messaging service worker…");
         const serviceWorkerRegistration = await withTimeout(
           registerMessagingServiceWorker(),
           15000,
-          "Timed out registering/activating the messaging service worker."
+          "SW register/activate timed out"
+        );
+        log(
+          "2",
+          `OK scope=${serviceWorkerRegistration.scope} active=${!!serviceWorkerRegistration.active}`
         );
 
-        if (!serviceWorkerRegistration.active) {
-          throw new Error(
-            "Service worker registered but is not active yet. Try again."
-          );
-        }
-
-        // Isolate browser push vs Firebase/Google API failures.
-        setStatus("Creating browser push subscription…");
+        log("3", "Creating browser push subscription…");
         let pushSubscription =
           await serviceWorkerRegistration.pushManager.getSubscription();
         if (!pushSubscription) {
@@ -235,13 +256,48 @@
               applicationServerKey: vapidKeyToUint8Array(vapidKey),
             }),
             15000,
-            "Timed out on PushManager.subscribe (browser push service)."
+            "PushManager.subscribe timed out"
           );
         }
+        log("3", `OK endpoint=${pushSubscription.endpoint.slice(0, 48)}…`);
 
-        setStatus(
-          "Fetching FCM token from Google (Installations + FCM APIs)…"
+        log("4a", "Probing Installations API reachability…");
+        await probeUrl(
+          "4a",
+          `https://firebaseinstallations.googleapis.com/v1/projects/${firebaseConfig.projectId}/installations`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+              "x-goog-api-key": firebaseConfig.apiKey,
+            },
+            body: JSON.stringify({
+              appId: firebaseConfig.appId,
+              authVersion: "FIS_v2",
+              sdkVersion: "w:0.6.0",
+            }),
+          }
         );
+
+        log("4b", "Getting Firebase Installation ID…");
+        const installations = getInstallations(app);
+        const fid = await withTimeout(
+          getId(installations),
+          15000,
+          "getId (Installations) timed out — often IndexedDB or Installations API"
+        );
+        log("4b", `OK fid=${fid}`);
+
+        log("4c", "Getting Installations auth token…");
+        const installAuth = await withTimeout(
+          getInstallationAuthToken(installations),
+          15000,
+          "getInstallationAuthToken timed out"
+        );
+        log("4c", `OK authToken length=${installAuth.length}`);
+
+        log("5", "Calling FCM getToken…");
         const messaging = getMessaging(app);
         onMessage(messaging, (payload) => {
           console.log("Foreground FCM message:", payload);
@@ -253,19 +309,19 @@
             serviceWorkerRegistration,
           }),
           20000,
-          "Timed out calling Google FCM/Installations APIs. If you are in a region that blocks Google, try a VPN; also confirm the VAPID key in Firebase Console."
+          "getToken timed out after Installations succeeded — FCM registrations API or local token DB issue"
         );
 
         if (!token) {
-          throw new Error(
-            "No registration token available. Check that Cloud Messaging is enabled for this web app."
-          );
+          throw new Error("getToken returned empty.");
         }
 
+        logLines.length = 0;
         setStatus(token, "token");
       } catch (error) {
         console.error(error);
-        setStatus(error?.message || String(error), "error");
+        log("ERROR", error?.message || String(error));
+        setStatus(logLines.join("\n"), "error");
       } finally {
         button.disabled = false;
       }
