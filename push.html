@@ -121,6 +121,37 @@
       statusEl.classList.toggle("is-token", kind === "token");
     }
 
+    function withTimeout(promise, ms, message) {
+      let timeoutId;
+      const timeout = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(message)), ms);
+      });
+      return Promise.race([promise, timeout]).finally(() =>
+        clearTimeout(timeoutId)
+      );
+    }
+
+    async function waitForActiveWorker(registration) {
+      const worker =
+        registration.active || registration.installing || registration.waiting;
+      if (!worker) {
+        return navigator.serviceWorker.ready;
+      }
+      if (worker.state === "activated") {
+        return registration;
+      }
+      await new Promise((resolve, reject) => {
+        worker.addEventListener("statechange", () => {
+          if (worker.state === "activated") {
+            resolve();
+          } else if (worker.state === "redundant") {
+            reject(new Error("Service worker became redundant during install."));
+          }
+        });
+      });
+      return registration;
+    }
+
     button.addEventListener("click", async () => {
       button.disabled = true;
       setStatus("Requesting notification permission…");
@@ -145,26 +176,36 @@
           );
         }
 
-        const serviceWorkerRegistration =
+        // Use the SW registered on the home page; update it so this tab
+        // talks to an active firebase-messaging worker.
+        setStatus("Preparing service worker…");
+        let serviceWorkerRegistration =
           await navigator.serviceWorker.getRegistration("/");
         if (!serviceWorkerRegistration) {
           throw new Error(
             "Service worker is not registered yet. Open the home page first, then try again."
           );
         }
+        await serviceWorkerRegistration.update();
+        serviceWorkerRegistration = await waitForActiveWorker(
+          serviceWorkerRegistration
+        );
         await navigator.serviceWorker.ready;
 
         const messaging = getMessaging(app);
-
         onMessage(messaging, (payload) => {
           console.log("Foreground FCM message:", payload);
         });
 
         setStatus("Fetching FCM token…");
-        const token = await getToken(messaging, {
-          vapidKey,
-          serviceWorkerRegistration,
-        });
+        const token = await withTimeout(
+          getToken(messaging, {
+            vapidKey,
+            serviceWorkerRegistration,
+          }),
+          20000,
+          "Timed out while fetching the FCM token. Hard-refresh the home page (Ctrl+Shift+R), allow notifications, then try again."
+        );
 
         if (!token) {
           throw new Error(
