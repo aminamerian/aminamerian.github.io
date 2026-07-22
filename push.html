@@ -107,9 +107,13 @@
       measurementId: "G-DK0C5G97RJ",
     };
 
+    // Must match firebase-js-sdk DEFAULT_SW_SCOPE
+    const FCM_SW_SCOPE = "/firebase-cloud-messaging-push-scope";
+
     // Web Push certificate public key from Firebase Console →
     // Project settings → Cloud Messaging → Web Push certificates
-    const vapidKey = "BGunPWXUtJffDFh2Hoz-meplQ0aqvECCjEx2sbsMf7eyGm_SKx1g48n-6wNWtROFyqV4tGLGzAchhgZaalyGZJY";
+    const vapidKey =
+      "BGunPWXUtJffDFh2Hoz-meplQ0aqvECCjEx2sbsMf7eyGm_SKx1g48n-6wNWtROFyqV4tGLGzAchhgZaalyGZJY";
 
     const app = initializeApp(firebaseConfig);
     const button = document.getElementById("get-token-btn");
@@ -131,25 +135,56 @@
       );
     }
 
-    async function waitForActiveWorker(registration) {
+    function vapidKeyToUint8Array(base64String) {
+      const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+      const base64 = (base64String + padding)
+        .replace(/-/g, "+")
+        .replace(/_/g, "/");
+      const raw = atob(base64);
+      return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+    }
+
+    async function waitForActivated(registration) {
       const worker =
-        registration.active || registration.installing || registration.waiting;
+        registration.installing || registration.waiting || registration.active;
       if (!worker) {
-        return navigator.serviceWorker.ready;
+        throw new Error("Service worker registration has no worker.");
       }
       if (worker.state === "activated") {
         return registration;
       }
       await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          reject(
+            new Error("Service worker did not activate within 10 seconds.")
+          );
+        }, 10000);
         worker.addEventListener("statechange", () => {
           if (worker.state === "activated") {
+            clearTimeout(timer);
             resolve();
           } else if (worker.state === "redundant") {
-            reject(new Error("Service worker became redundant during install."));
+            clearTimeout(timer);
+            reject(new Error("Service worker became redundant."));
           }
         });
       });
       return registration;
+    }
+
+    /**
+     * Clear stale registrations (e.g. old scope "/") then register with
+     * Firebase's default messaging scope.
+     */
+    async function registerMessagingServiceWorker() {
+      const existing = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(existing.map((reg) => reg.unregister()));
+
+      const registration = await navigator.serviceWorker.register(
+        "/firebase-messaging-sw.js",
+        { scope: FCM_SW_SCOPE }
+      );
+      return waitForActivated(registration);
     }
 
     button.addEventListener("click", async () => {
@@ -176,40 +211,54 @@
           );
         }
 
-        // Use the SW registered on the home page; update it so this tab
-        // talks to an active firebase-messaging worker.
-        setStatus("Preparing service worker…");
-        let serviceWorkerRegistration =
-          await navigator.serviceWorker.getRegistration("/");
-        if (!serviceWorkerRegistration) {
+        setStatus("Registering messaging service worker…");
+        const serviceWorkerRegistration = await withTimeout(
+          registerMessagingServiceWorker(),
+          15000,
+          "Timed out registering/activating the messaging service worker."
+        );
+
+        if (!serviceWorkerRegistration.active) {
           throw new Error(
-            "Service worker is not registered yet. Open the home page first, then try again."
+            "Service worker registered but is not active yet. Try again."
           );
         }
-        await serviceWorkerRegistration.update();
-        serviceWorkerRegistration = await waitForActiveWorker(
-          serviceWorkerRegistration
-        );
-        await navigator.serviceWorker.ready;
 
+        // Isolate browser push vs Firebase/Google API failures.
+        setStatus("Creating browser push subscription…");
+        let pushSubscription =
+          await serviceWorkerRegistration.pushManager.getSubscription();
+        if (!pushSubscription) {
+          pushSubscription = await withTimeout(
+            serviceWorkerRegistration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: vapidKeyToUint8Array(vapidKey),
+            }),
+            15000,
+            "Timed out on PushManager.subscribe (browser push service)."
+          );
+        }
+
+        setStatus(
+          "Fetching FCM token from Google (Installations + FCM APIs)…"
+        );
         const messaging = getMessaging(app);
         onMessage(messaging, (payload) => {
           console.log("Foreground FCM message:", payload);
         });
 
-        setStatus("Fetching FCM token…");
         const token = await withTimeout(
           getToken(messaging, {
             vapidKey,
             serviceWorkerRegistration,
           }),
           20000,
-          "Timed out while fetching the FCM token. Hard-refresh the home page (Ctrl+Shift+R), allow notifications, then try again."
+          "Timed out calling Google FCM/Installations APIs. If you are in a region that blocks Google, try a VPN; also confirm the VAPID key in Firebase Console."
         );
 
         if (!token) {
           throw new Error(
-            "No registration token available. Check that the VAPID key is set and Cloud Messaging is enabled."
+            "No registration token available. Check that Cloud Messaging is enabled for this web app."
           );
         }
 

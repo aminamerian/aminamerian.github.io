@@ -166,8 +166,11 @@
          if (!('serviceWorker' in navigator)) {
             return;
          }
+         // Firebase's default messaging SW scope (see firebase-js-sdk DEFAULT_SW_SCOPE).
          navigator.serviceWorker
-            .register('/firebase-messaging-sw.js')
+            .register('/firebase-messaging-sw.js', {
+               scope: '/firebase-cloud-messaging-push-scope'
+            })
             .catch(function (error) {
                console.error('FCM service worker registration failed:', error);
             });
