@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Web Push Subscribe</title>
+  <link rel="shortcut icon" href="favicon.png">
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --text: #e7ecf3;
+      --muted: #8b9bb4;
+      --accent: #3d8bfd;
+      --danger: #f07178;
+      --ok: #7fd99a;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background:
+        radial-gradient(ellipse at top, #1e3a5f 0%, transparent 55%),
+        var(--bg);
+      color: var(--text);
+      padding: 1.5rem;
+    }
+
+    main {
+      width: min(40rem, 100%);
+    }
+
+    h1 {
+      margin: 0 0 0.35rem;
+      font-size: 1.35rem;
+    }
+
+    .lede {
+      margin: 0 0 1rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.45;
+    }
+
+    .actions {
+      display: grid;
+      gap: 0.6rem;
+      margin-bottom: 0.75rem;
+    }
+
+    button {
+      display: block;
+      width: 100%;
+      padding: 0.85rem 1.25rem;
+      border: 0;
+      border-radius: 0.5rem;
+      background: var(--accent);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: transparent;
+      border: 1px solid #31425c;
+      color: var(--text);
+    }
+
+    button:hover {
+      filter: brightness(1.08);
+    }
+
+    button:disabled {
+      opacity: 0.65;
+      cursor: wait;
+    }
+
+    #status {
+      margin: 0;
+      padding: 1rem;
+      min-height: 4.5rem;
+      border-radius: 0.5rem;
+      background: var(--surface);
+      color: var(--muted);
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+      font-size: 0.85rem;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    #status.is-error {
+      color: var(--danger);
+    }
+
+    #status.is-ok {
+      color: var(--ok);
+    }
+
+    #push-toast {
+      display: none;
+      margin: 0 0 0.75rem;
+      padding: 1rem 1.1rem;
+      border-radius: 0.5rem;
+      border-left: 4px solid var(--accent);
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    #push-toast.is-visible {
+      display: block;
+    }
+
+    #push-toast strong {
+      display: block;
+      margin-bottom: 0.35rem;
+    }
+
+    #push-toast span {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <div id="push-toast" role="status" aria-live="polite"></div>
+    <h1>Web Push (VAPID)</h1>
+    <p class="lede">
+      Subscribes this browser via standard Web Push and stores the subscription
+      on your Django API.
+    </p>
+    <div class="actions">
+      <button type="button" id="subscribe-btn">Enable notifications</button>
+      <button type="button" id="unsubscribe-btn" class="secondary">Disable notifications</button>
+    </div>
+    <pre id="status" aria-live="polite">Configure js/web-push-config.js, then click Enable.</pre>
+  </main>
+
+  <script src="js/web-push-config.js"></script>
+  <script src="js/web-push-client.js"></script>
+  <script>
+    const statusEl = document.getElementById("status");
+    const toastEl = document.getElementById("push-toast");
+    const subscribeBtn = document.getElementById("subscribe-btn");
+    const unsubscribeBtn = document.getElementById("unsubscribe-btn");
+    let toastTimer = null;
+
+    function setStatus(message, kind) {
+      statusEl.textContent = message;
+      statusEl.classList.toggle("is-error", kind === "error");
+      statusEl.classList.toggle("is-ok", kind === "ok");
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function showPushOnPage({ title, body }) {
+      toastEl.innerHTML = `<strong>${escapeHtml(title || "New message")}</strong><span>${escapeHtml(body || "")}</span>`;
+      toastEl.classList.add("is-visible");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove("is-visible"), 12000);
+    }
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        if (event.data?.type !== "WEB_PUSH") {
+          return;
+        }
+        console.log("Web push in page:", event.data);
+        showPushOnPage(event.data);
+      });
+    }
+
+    subscribeBtn.addEventListener("click", async () => {
+      subscribeBtn.disabled = true;
+      unsubscribeBtn.disabled = true;
+      setStatus("Subscribing…");
+      try {
+        const result = await window.WebPushClient.subscribe();
+        const endpoint = result.subscription?.endpoint || "";
+        setStatus(
+          `Subscribed.\n\nendpoint:\n${endpoint}\n\nserver:\n${JSON.stringify(result.server, null, 2)}`,
+          "ok"
+        );
+      } catch (error) {
+        console.error(error);
+        setStatus(error?.message || String(error), "error");
+      } finally {
+        subscribeBtn.disabled = false;
+        unsubscribeBtn.disabled = false;
+      }
+    });
+
+    unsubscribeBtn.addEventListener("click", async () => {
+      subscribeBtn.disabled = true;
+      unsubscribeBtn.disabled = true;
+      setStatus("Unsubscribing…");
+      try {
+        const result = await window.WebPushClient.unsubscribe();
+        setStatus(`Unsubscribed.\n${JSON.stringify(result, null, 2)}`, "ok");
+      } catch (error) {
+        console.error(error);
+        setStatus(error?.message || String(error), "error");
+      } finally {
+        subscribeBtn.disabled = false;
+        unsubscribeBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+
+</html>
