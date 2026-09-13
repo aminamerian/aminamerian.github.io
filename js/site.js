@@ -27,10 +27,14 @@
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var reveals = document.querySelectorAll("[data-reveal]");
 
-  if (reduceMotion || !("IntersectionObserver" in window)) {
+  function showReveals() {
     reveals.forEach(function (el) {
       el.classList.add("is-visible");
     });
+  }
+
+  if (reduceMotion || !("IntersectionObserver" in window)) {
+    showReveals();
     return;
   }
 
@@ -50,10 +54,83 @@
     observer.observe(el);
   });
 
-  // Hero is above the fold — reveal immediately after paint
   requestAnimationFrame(function () {
     document.querySelectorAll(".hero [data-reveal]").forEach(function (el) {
       el.classList.add("is-visible");
     });
   });
+
+  /* —— Cinematic scroll handoff —— */
+  var hero = document.getElementById("home");
+  var lower = document.querySelector(".lower");
+  var ticking = false;
+
+  function updateScrollHandoff() {
+    ticking = false;
+    if (!hero) return;
+
+    var rect = hero.getBoundingClientRect();
+    var height = Math.max(rect.height, 1);
+    var progress = Math.min(1, Math.max(0, -rect.top / (height * 0.72)));
+    hero.style.setProperty("--scroll-progress", progress.toFixed(4));
+
+    if (lower) {
+      var lowerRect = lower.getBoundingClientRect();
+      var arrive = Math.min(1, Math.max(0, 1 - lowerRect.top / (window.innerHeight * 0.85)));
+      lower.style.setProperty("--arrive", arrive.toFixed(4));
+    }
+  }
+
+  function onScroll() {
+    if (!ticking) {
+      ticking = true;
+      requestAnimationFrame(updateScrollHandoff);
+    }
+  }
+
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll, { passive: true });
+  updateScrollHandoff();
+
+  /* —— Magnetic social icons —— */
+  var socialLinks = Array.prototype.slice.call(document.querySelectorAll(".social a"));
+  var finePointer = window.matchMedia("(pointer: fine)").matches;
+
+  if (!finePointer || !socialLinks.length) return;
+
+  var strength = 10;
+  var radius = 88;
+
+  function resetMagnets() {
+    socialLinks.forEach(function (link) {
+      link.style.setProperty("--mx", "0px");
+      link.style.setProperty("--my", "0px");
+    });
+  }
+
+  window.addEventListener(
+    "pointermove",
+    function (event) {
+      socialLinks.forEach(function (link) {
+        var rect = link.getBoundingClientRect();
+        var cx = rect.left + rect.width / 2;
+        var cy = rect.top + rect.height / 2;
+        var dx = event.clientX - cx;
+        var dy = event.clientY - cy;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < radius && dist > 0.5) {
+          var pull = (1 - dist / radius) * strength;
+          link.style.setProperty("--mx", (dx / dist) * pull + "px");
+          link.style.setProperty("--my", (dy / dist) * pull + "px");
+        } else {
+          link.style.setProperty("--mx", "0px");
+          link.style.setProperty("--my", "0px");
+        }
+      });
+    },
+    { passive: true }
+  );
+
+  window.addEventListener("pointerleave", resetMagnets);
 })();

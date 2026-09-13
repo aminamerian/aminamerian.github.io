@@ -41,11 +41,6 @@
           </a>
         </li>
         <li>
-          <a href="https://stackoverflow.com/users/7160687/amina2" target="_blank" rel="noopener noreferrer" aria-label="Stack Overflow">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.99 21.01v-6.37h2.01V23H1.94v-8.36h2.01v6.37h15.04zM7.41 18.99h9.11v-2.01H7.41v2.01zm.13-4.56 8.9 1.87.42-1.97-8.9-1.87-.42 1.97zm1.17-4.74 8.24 3.84.84-1.82-8.24-3.85-.84 1.83zm2.28-4.5 7 5.2 1.24-1.66-7-5.2-1.24 1.66zM16.9 1.99l-1.57 1.36 5.45 6.68 1.57-1.36-5.45-6.68z"/></svg>
-          </a>
-        </li>
-        <li>
           <a href="https://t.me/Aamamin" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
             <svg class="icon-telegram" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21.5 3.05a1.4 1.4 0 0 0-1.48-.24L2.78 10.2c-1 .44-1 1.86.02 2.28l4.73 1.9 1.83 5.7c.3.94 1.5 1.2 2.16.45l2.7-3.12 4.7 3.42c.9.66 2.16.17 2.4-.95L22.7 4.48a1.4 1.4 0 0 0-1.2-1.43z"/></svg>
           </a>
@@ -58,29 +53,38 @@
     </a>
   </header>
 
-  <main>
+  <main class="lower">
     <section class="about" id="about">
+      <div class="about__glow" aria-hidden="true"></div>
       <div class="about__grid">
         <div class="about__portrait reveal" data-reveal>
-          <img class="profile-pic" src="images/profilepic.png" alt="Amin Amerian" width="320" height="320" loading="lazy">
+          <div class="about__ripple" aria-hidden="true">
+            <span></span>
+            <span></span>
+          </div>
+          <div class="profile-wrap">
+            <img class="profile-pic" src="images/profilepic.png" alt="Amin Amerian" width="320" height="320" loading="lazy">
+            <span class="profile-light" aria-hidden="true"></span>
+          </div>
         </div>
         <div class="about__copy">
-          <h2 class="section-title reveal" data-reveal>About Me</h2>
-          <p class="reveal" data-reveal>
-            I'm a software engineer with a track record of building and shipping products end to end.
-            <br>I care about thoughtful architecture, practical problem-solving, and software that stays reliable as it grows.
-            <br>Earlier in my career I also built mobile apps, which sharpened how I think about users and delivery.
-            <br>I keep learning and adapting, and I'm looking to work with experienced teams that take craft and quality seriously.
-          </p>
+          <p class="about__eyebrow reveal" data-reveal>About Me</p>
+          <h2 class="section-title reveal" data-reveal>Building with care,<br>shipping with intent.</h2>
+          <div class="about__body reveal" data-reveal>
+            <p>I'm a software engineer with a track record of building and shipping products end to end.</p>
+            <p>I care about thoughtful architecture, practical problem-solving, and software that stays reliable as it grows.</p>
+            <p>Earlier in my career I also built mobile apps, which sharpened how I think about users and delivery.</p>
+            <p>I keep learning and adapting, and I'm looking to work with experienced teams that take craft and quality seriously.</p>
+          </div>
         </div>
       </div>
     </section>
-  </main>
 
-  <footer class="site-footer">
-    <p>&copy; <span id="year"></span> Amin Amerian</p>
-    <a class="site-footer__top" href="#home">Back to top</a>
-  </footer>
+    <footer class="site-footer">
+      <p>&copy; <span id="year"></span> Amin Amerian</p>
+      <a class="site-footer__top" href="#home">Back to top</a>
+    </footer>
+  </main>
 
   <script src="js/site.js" defer></script>
 </body>
