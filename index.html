@@ -1,164 +1,87 @@
 <!DOCTYPE html>
-
-<html class="no-js" lang="en">
-
+<html lang="en">
 <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Amin Amerian — software engineer building and shipping reliable products.">
+  <meta name="author" content="Amin Amerian">
+  <title>Amin Amerian</title>
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-   <meta charset="utf-8">
-   <title>Amin Amerian</title>
-   <meta name="description" content="">
-   <meta name="author" content="">
-
-
-   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-
-
-   <link rel="stylesheet" href="css/default.css">
-   <link rel="stylesheet" href="css/layout.css">
-   <link rel="stylesheet" href="css/media-queries.css">
-   <link rel="stylesheet" href="css/magnific-popup.css">
-
-
-   <script src="js/modernizr.js"></script>
-
-
-   <link rel="shortcut icon" href="favicon.png">
-
+  <link rel="stylesheet" href="css/site.css">
+  <link rel="shortcut icon" href="favicon.png">
 </head>
-
 <body>
+  <a class="skip-link" href="#about">Skip to content</a>
 
+  <header class="hero" id="home">
+    <div class="hero__media" id="hero-media" aria-hidden="true"></div>
+    <div class="hero__veil" aria-hidden="true"></div>
 
-   <header id="home">
+    <div class="hero__content">
+      <h1 class="hero__name reveal" data-reveal>I'm Amin Amerian</h1>
+      <h3 class="hero__lede reveal" data-reveal>
+        A <span>software engineer</span> with
+        <span id="experience-years">4+</span> years of experience building
+        and shipping products. Focused on clear design, reliable systems,
+        and delivering work that holds up in production.
+      </h3>
+      <ul class="social reveal" data-reveal>
+        <li>
+          <a href="https://www.linkedin.com/in/aminamerian/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45zM22.23 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.46c.98 0 1.77-.77 1.77-1.73V1.73C24 .77 23.21 0 22.23 0z"/></svg>
+          </a>
+        </li>
+        <li>
+          <a href="https://github.com/aminamerian" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 .3a12 12 0 0 0-3.79 23.4c.6.11.82-.26.82-.58v-2.02c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.08 1.85 1.24 1.85 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.25 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.62-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.82.58A12 12 0 0 0 12 .3z"/></svg>
+          </a>
+        </li>
+        <li>
+          <a href="https://stackoverflow.com/users/7160687/amina2" target="_blank" rel="noopener noreferrer" aria-label="Stack Overflow">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.99 21.01v-6.37h2.01V23H1.94v-8.36h2.01v6.37h15.04zM7.41 18.99h9.11v-2.01H7.41v2.01zm.13-4.56 8.9 1.87.42-1.97-8.9-1.87-.42 1.97zm1.17-4.74 8.24 3.84.84-1.82-8.24-3.85-.84 1.83zm2.28-4.5 7 5.2 1.24-1.66-7-5.2-1.24 1.66zM16.9 1.99l-1.57 1.36 5.45 6.68 1.57-1.36-5.45-6.68z"/></svg>
+          </a>
+        </li>
+        <li>
+          <a href="https://t.me/Aamamin" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
+            <svg class="icon-telegram" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21.5 3.05a1.4 1.4 0 0 0-1.48-.24L2.78 10.2c-1 .44-1 1.86.02 2.28l4.73 1.9 1.83 5.7c.3.94 1.5 1.2 2.16.45l2.7-3.12 4.7 3.42c.9.66 2.16.17 2.4-.95L22.7 4.48a1.4 1.4 0 0 0-1.2-1.43z"/></svg>
+          </a>
+        </li>
+      </ul>
+    </div>
 
-      <nav id="nav-wrap">
+    <a class="hero__scroll" href="#about" aria-label="Scroll to about">
+      <span class="hero__scroll-line" aria-hidden="true"></span>
+    </a>
+  </header>
 
-         <a class="mobile-btn" href="#nav-wrap" title="Show navigation">Show navigation</a>
-         <a class="mobile-btn" href="#" title="Hide navigation">Hide navigation</a>
-
-
-
-      </nav>
-
-      <div class="row banner">
-         <div class="banner-text    ">
-            <h1 class="responsive-headline">I'm Amin Amerian</h1>
-            <h3>
-               <span class="text-border">A <span>back-end</span> developer with
-                  <span id="experience-years" style="font-size: xx-large;">4+</span> years of experience in developing
-                  and deploying
-               </span>
-               <br><span class="text-border">
-                  web applications. Proficient in creating efficient and scalable solutions using
-               </span>
-               <br><span class="text-border">
-                  Django and DRF with a focus on RESTful APIs and database design.</span>
-               </span>
-            </h3>
-
-            <ul class="social">
-
-               <li><a href="https://www.linkedin.com/in/aminamerian/"><i class="fa fa-linkedin"></i></a></li>
-               <li><a href="https://github.com/aminamerian"><i class="fa fa-github"></i></a></li>
-               <li><a href="https://stackoverflow.com/users/7160687/amina2"><i class="fa fa-stack-overflow"></i></a>
-               </li>
-
-            </ul>
-         </div>
+  <main>
+    <section class="about" id="about">
+      <div class="about__grid">
+        <div class="about__portrait reveal" data-reveal>
+          <img class="profile-pic" src="images/profilepic.png" alt="Amin Amerian" width="320" height="320" loading="lazy">
+        </div>
+        <div class="about__copy">
+          <h2 class="section-title reveal" data-reveal>About Me</h2>
+          <p class="reveal" data-reveal>
+            I'm a software engineer with a track record of building and shipping products end to end.
+            <br>I care about thoughtful architecture, practical problem-solving, and software that stays reliable as it grows.
+            <br>Earlier in my career I also built mobile apps, which sharpened how I think about users and delivery.
+            <br>I keep learning and adapting, and I'm looking to work with experienced teams that take craft and quality seriously.
+          </p>
+        </div>
       </div>
+    </section>
+  </main>
 
-      <p class="scrolldown">
-         <a class="smoothscroll" href="#about"><i class="icon-down-circle"></i></a>
-      </p>
+  <footer class="site-footer">
+    <p>&copy; <span id="year"></span> Amin Amerian</p>
+    <a class="site-footer__top" href="#home">Back to top</a>
+  </footer>
 
-   </header>
-
-
-
-   <section id="about">
-
-      <div class="row">
-
-         <div class="three columns">
-
-            <img class="profile-pic" src="images/profilepic.png" alt="" />
-
-         </div>
-
-         <div class="nine columns main-col">
-
-            <h2>About Me</h2>
-
-            <p>I'm a back-end developer with a track record of developing and deploying web applications.
-               <br>Experienced in using Django to create efficient and scalable solutions.
-               <br>Formerly worked as an android developer, utilizing my Java, Kotlin, and Android SDK skills to build
-               mobile applications.
-               <br>Seeking to expand my skills, particularly in the field of DevOps, and to work with a team of
-               experienced professionals
-               to deliver high-quality software solutions.
-            </p>
-
-
-
-         </div>
-
-      </div>
-
-      </div>
-
-   </section>
-
-   <footer>
-
-      <div class="row">
-
-         <div class="twelve columns">
-
-
-
-            <ul class="copyright">
-               <li>&copy; Copyright 2014 CeeVee</li>
-               <li>Design by <a href="http://www.styleshout.com/" title="Styleshout" target="_blank">Styleshout</a></li>
-            </ul>
-
-         </div>
-
-         <div id="go-top"><a class="smoothscroll" title="Back to Top" href="#home"><i class="icon-up-open"></i></a>
-         </div>
-
-      </div>
-
-   </footer>
-
-
-   <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-   <script>window.jQuery || document.write('<script src="js/jquery-1.10.2.min.js"><\/script>')</script>
-   <script type="text/javascript" src="js/jquery-migrate-1.2.1.min.js"></script>
-   <script src="js/jquery.flexslider.js"></script>
-   <script src="js/waypoints.js"></script>
-   <script src="js/jquery.fittext.js"></script>
-   <script src="js/magnific-popup.js"></script>
-   <script src="js/init.js"></script>
-   <script>
-      var imageNumber = Math.floor(Math.random() * 17) + 1;
-      document.getElementById("home").style.backgroundImage = 'url(images/header-background-' + imageNumber + '.jpg)';
-   </script>
-   <script>
-      (function () {
-         var startDate = new Date('2021-01-01');
-         var currentDate = new Date();
-         var diffYear = currentDate.getFullYear() - startDate.getFullYear();
-         var m = currentDate.getMonth() - startDate.getMonth();
-         if (m < 0 || (m === 0 && currentDate.getDate() < startDate.getDate())) {
-            diffYear--;
-         }
-         var element = document.getElementById('experience-years');
-         if (element) {
-            element.textContent = diffYear + '+';
-         }
-      })();
-   </script>
+  <script src="js/site.js" defer></script>
 </body>
-
 </html>
